@@ -1,4 +1,5 @@
 import os
+import srsly
 from pathlib import Path
 from slugify import slugify
 
@@ -22,7 +23,7 @@ def create_object(
     create_lemmatizer(lang_name, lang_code)
     install_lang(lang_name, lang_code)
     create_base_config(lang_name, lang_code)
-
+    create_lookups_data(lang_name, lang_code)
     return lang_name, lang_code
 
 
@@ -374,3 +375,31 @@ class {lang_name.capitalize()}Lemmatizer(Lemmatizer):
 
 
 """)
+
+
+def create_lookups_data(lang_name, lang_code):
+    # Slugify user input to prevent Python and os errors
+    new_lang_name = slugify(lang_name).replace("-", "_")
+    new_lang_code = slugify(lang_code).replace("-", "_")
+
+    # Create a directory for the new language
+    new_lang_path = Path.cwd() / "new_lang"
+    new_lookups_path = new_lang_path / "lookups"
+    if not new_lookups_path.exists():
+        new_lookups_path.mkdir(parents=True, exist_ok=True)
+
+    texts_path = new_lang_path / "texts"
+    if not texts_path.exists():
+        texts_path.mkdir(parents=True, exist_ok=True) 
+
+    # UPOS lookups
+    upos_filename = new_lookups_path / (new_lang_code + "_upos_lookup.json")
+    srsly.write_json(upos_filename, {})
+
+    # LEMMA lookups
+    lemma_filename = new_lookups_path / (new_lang_code + "_lemma_lookup.json")
+    srsly.write_json(lemma_filename, {})
+
+    # ENT lookups
+    lemma_filename = new_lookups_path / (new_lang_code + "_entity_lookup.json")
+    srsly.write_json(lemma_filename, {})

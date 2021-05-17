@@ -24,7 +24,7 @@ def create_object(
     install_lang(lang_name, lang_code)
     create_base_config(lang_name, lang_code)
     create_lookups_data(lang_name, lang_code)
-    return lang_name, lang_code
+    return f"🍈 created language object for {lang_name}"
 
 
 def create_object_file(
@@ -85,7 +85,7 @@ def make_lemmatizer(
 def do_registration():
     from pathlib import Path
     cadet_path = Path.cwd()
-    lookups_path = cadet_path / "new_lang" / "{lang_name}" / "lookups"
+    lookups_path = cadet_path / "new_lang" / "lookups"
     result = {{}}
     for lookup in lookups_path.iterdir():
         key = lookup.stem[lookup.stem.find('_') + 1:]
@@ -144,7 +144,7 @@ from __future__ import unicode_literals
 '''
 Example sentences to test spaCy and its language models.
 
->>> from new_lang.{lang_code}.examples import sentences
+>>> from new_lang.examples import sentences
 >>> docs = nlp.pipe(sentences)
 '''
 
@@ -266,7 +266,7 @@ tokenizer = {{"@tokenizers": "spacy.Tokenizer.v1"}}
 batch_size = 1000
 
 [nlp.vocab.lookups]
-lemma_lookup = "new_lang/{lang_name}/lookups/{lang_code}_lemma_lookup.json"
+lemma_lookup = "new_lang/lookups/{lang_code}_lemma_lookup.json"
 #lexeme_norm_lookup = "assets/lookups/srp_lexeme_norm.json"
 
 [components]
@@ -327,7 +327,7 @@ nO = null
 
 [initialize.components.attribute_ruler.tag_map]
 @readers = "srsly.read_json.v1"
-path = "new_lang/{lang_name}/lookups/{lang_code}_tag_map.json"
+path = "new_lang/lookups/{lang_code}_tag_map.json"
 """
     )
 

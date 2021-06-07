@@ -1,7 +1,8 @@
 from pathlib import Path
 import importlib.util
 
-def tokenization(lang_name:str):
+
+def tokenization(lang_name: str):
     new_lang = Path.cwd() / "new_lang"
     path = new_lang / "examples.py"
     spec = importlib.util.spec_from_file_location("sentences", str(path))

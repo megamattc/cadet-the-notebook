@@ -30,10 +30,11 @@ def create_object(
 def create_object_file(
     lang_name: str, lang_code: str, direction: str, has_case: bool, has_letters: bool
 ):
-    path = Path.cwd() / "new_lang" 
+    path = Path.cwd() / "new_lang"
     path.mkdir(parents=True, exist_ok=True)
     init = path / "__init__.py"
-    init.write_text(f"""
+    init.write_text(
+        f"""
 import spacy
 from spacy.language import Language
 from spacy.lang.tokenizer_exceptions import URL_MATCH
@@ -93,11 +94,12 @@ def do_registration():
     return result
 
 __all__ = ["{lang_name.capitalize()}"]
-""")
+"""
+    )
 
 
 def create_stop_words(lang_name: str, lang_code: str):
-    path = Path.cwd() / "new_lang" 
+    path = Path.cwd() / "new_lang"
     path = path / "stop_words.py"
     path.write_text(
         f'''
@@ -133,7 +135,7 @@ TOKENIZER_EXCEPTIONS = update_exc(BASE_EXCEPTIONS, *exclusions)
 
 
 def create_examples(lang_name, lang_code):
-    path = Path.cwd() / "new_lang" 
+    path = Path.cwd() / "new_lang"
     path = path / "examples.py"
     path.write_text(
         f"""
@@ -253,7 +255,7 @@ def install_lang(lang_name, lang_code):
 
 
 def create_base_config(lang_name, lang_code):
-    path = Path.cwd() / "new_lang" 
+    path = Path.cwd() / "new_lang"
     path = path / "base_config.cfg"
     path.write_text(
         f"""[system]
@@ -332,12 +334,12 @@ path = "new_lang/lookups/{lang_code}_tag_map.json"
     )
 
 
-def create_lemmatizer(
-    lang_name: str, lang_code: str):
+def create_lemmatizer(lang_name: str, lang_code: str):
     path = Path.cwd() / "new_lang"
     path.mkdir(parents=True, exist_ok=True)
     init = path / "lemmatizer.py"
-    init.write_text(f"""
+    init.write_text(
+        f"""
 from typing import List, Tuple
 from spacy.pipeline import Lemmatizer
 from spacy.tokens import Token
@@ -374,7 +376,8 @@ class {lang_name.capitalize()}Lemmatizer(Lemmatizer):
         return [lookup_table.get(string, string)]
 
 
-""")
+"""
+    )
 
 
 def create_lookups_data(lang_name, lang_code):
@@ -390,7 +393,7 @@ def create_lookups_data(lang_name, lang_code):
 
     texts_path = new_lang_path / "texts"
     if not texts_path.exists():
-        texts_path.mkdir(parents=True, exist_ok=True) 
+        texts_path.mkdir(parents=True, exist_ok=True)
 
     # UPOS lookups
     upos_filename = new_lookups_path / (new_lang_code + "_upos_lookup.json")

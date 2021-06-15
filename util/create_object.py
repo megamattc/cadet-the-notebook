@@ -403,6 +403,6 @@ def create_lookups_data(lang_name, lang_code):
     lemma_filename = new_lookups_path / (new_lang_code + "_lemma_lookup.json")
     srsly.write_json(lemma_filename, {})
 
-    # ENT lookups
-    lemma_filename = new_lookups_path / (new_lang_code + "_entity_lookup.json")
-    srsly.write_json(lemma_filename, {})
+    # FEAT lookups
+    features_filename = new_lookups_path / (new_lang_code + "_features_lookup.json")
+    srsly.write_json(features_filename, {})

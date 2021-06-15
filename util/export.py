@@ -15,7 +15,7 @@ def download(lang_name: str):
         if "lemma" in key:
             lemma_data = srsly.read_json(lookup)
 
-        if "entity" in key:
+        if "features" in key:
             entity_data = srsly.read_json(lookup)
 
         if "pos" in key:
@@ -33,12 +33,12 @@ def download(lang_name: str):
             doc.user_data["filename"] = filename
 
         docs = update_tokens_with_lookups(nlp, docs)
-        conll = [doc_to_conll(doc) for doc in docs]
+        conllu = [doc_to_conllu(doc) for doc in docs]
 
-        temp_path = Path("/tmp/conll_export")
+        temp_path = Path("/tmp/conllu_export")
         temp_path.mkdir(parents=True, exist_ok=True)
-        for filename, conll in zip(filenames, conll):
-            conll_filename = filename.split(".")[0] + ".conll"
+        for filename, conll in zip(filenames, conllu):
+            conll_filename = filename.split(".")[0] + ".conllu"
             (temp_path / conll_filename).write_text(conll)
 
         # shutil.make_archive("zipped_sample_directory", "zip", "sample_directory")
@@ -46,7 +46,7 @@ def download(lang_name: str):
         zip_file = str(temp_path).split("/")[-1] + ".zip"
         # save each doc to a file, return single zip file with all CONFIRM, can import directory into INCEpTION
 
-        return f"saved data to file /tmp/conll_export.zip"
+        return f"saved data to file /tmp/conllu_export.zip"
 
 
 def get_filenames() -> List[str]:
@@ -121,66 +121,64 @@ def update_vocab_from_lookups(nlp):
                 doc.spans["ents"] = [span]
 
 
-def update_tokens_with_lookups(nlp, docs: List[Doc]) -> List[Doc]:
+def update_tokens_with_lookups(nlp, docs:List[Doc]) -> List[Doc]:
 
-    # Read the lookups directory, make dict of table names and path to json files
+    #Read the lookups directory, make dict of table names and path to json files
     new_lang = Path.cwd() / "new_lang"
     lookups_path = new_lang / "lookups"
     for lookup in lookups_path.iterdir():
-        key = lookup.stem[lookup.stem.find("_") + 1 :]
-        if "lemma" in key:
+        key = lookup.stem[lookup.stem.find('_') + 1:]
+        if 'lemma' in key:
             lemma_data = srsly.read_json(lookup)
             assert isinstance(lemma_data, dict)
 
-        if "entity" in key:
-            entity_data = srsly.read_json(lookup)
-            assert isinstance(entity_data, dict)
-        if "pos" in key:
+        if 'features' in key:
+            features_data = srsly.read_json(lookup)
+            assert isinstance(features_data, dict)
+        if 'pos' in key:
             pos_data = srsly.read_json(lookup)
             assert isinstance(pos_data, dict)
 
     matcher = PhraseMatcher(nlp.vocab)
     try:
-        for ent in entity_data.keys():
-            matcher.add(ent, [nlp(ent)])
+        for ent in features_data.keys():
+                matcher.add(ent, [nlp(ent)])
     except AttributeError as e:
         print(e)
 
     for doc in docs:
         for t in doc:
-
+            
             lemma = lemma_data.get(t.text, None)
             if lemma:
                 t.lemma_ = lemma
-
+            
             pos = pos_data.get(t.text, None)
             if pos:
                 try:
                     t.pos_ = pos
-                except Exception as e:
-                    print(e)
-
+                except Exception as e: 
+                    raise HTTPException(status_code=404, detail="Invalid part of speech type: " + str(e))
+            
         matches = matcher(doc)
         for match_id, start, end in matches:
             string_id = nlp.vocab.strings[match_id]
-            # ent_label = entity_data.get(string_id, None)
+            #ent_label = entity_data.get(string_id, None)
             span = Span(doc, start, end, label=string_id)
-            if doc.spans.get("ents", None):
-                doc.spans["ents"].append(span)
+            if doc.spans.get('ents',None):
+                doc.spans['ents'].append(span)
             else:
                 doc.spans["ents"] = [span]
+
 
     return docs
 
 
-def load_ents(doc):
+def load_features(doc):
     """Take a Doc object with ent spans.  Use the lookups to label 
     each token in the Doc using the token's index. Returns a dictionary with the 
     token index as key and the entity label as value. If
-    #TODO This does not handle overlapping entities! When a token is part of two overlapping ent 
-    spans, it will only record the last ent-span.  There's no way to account for multiple-ents in the 
-    CoreNLP CoNLL format, so that's my excuse. Please prove me wrong.  
-
+     
     Args:
         doc (Doc): a spaCy doc object with entries in doc.spans['ents']
 
@@ -188,82 +186,92 @@ def load_ents(doc):
         dict: ent lookup by token index
     """
     new_lang = Path.cwd() / "new_lang"
+    lang_name = list(new_lang.iterdir())[0].name
     lookups_path = new_lang / "lookups"
     for lookup in lookups_path.iterdir():
-        key = lookup.stem[lookup.stem.find("_") + 1 :]
-        if "entity" in key:
-            entity_data = srsly.read_json(lookup)
-            assert isinstance(entity_data, dict)
-    tokens_with_ents = {}
-    if doc.spans.get("ents", None):
-        for span in doc.spans["ents"]:
-            ent = entity_data.get(span.text, None)
+        key = lookup.stem[lookup.stem.find('_') + 1:]
+        if 'features' in key:
+            features_data = srsly.read_json(lookup)
+            assert isinstance(features_data, dict)
+    tokens_with_features = {}
+    if doc.spans.get('ents', None):
+        for span in doc.spans['ents']:
+            feat = features_data.get(span.text,None)
             for t in span:
-                tokens_with_ents[t.i] = ent
-    return tokens_with_ents
+                tokens_with_features[t.i] = feat
+    return tokens_with_features
 
 
-def doc_to_conll(doc) -> str:
+def doc_to_conllu(doc) -> str:
     """
-    Converts a spaCy Doc object to string formatted using CoreNLP CoNLL format for pos, lemma and entity
-    https://dkpro.github.io/dkpro-core/releases/2.2.0/docs/format-reference.html#format-ConllCoreNlp
+    Converts a spaCy Doc object to string formatted using CoNLL-U format 
+    https://dkpro.github.io/dkpro-core/releases/2.2.0/docs/format-reference.html#format-ConllU
     
-    The CoreNLP CoNLL format is used by the Stanford CoreNLP package. 
+    The CoNLL-U format format targets dependency parsing. 
     Columns are tab-separated. Sentences are separated by a blank new line.
-
+    ID  FORM    LEMMA   CPOSTAG POSTAG  FEATS   HEAD    DEPREL  DEPS    MISC   
+    
     example:
-    1	Selectum	Selectum	NNP	O	_	_
-    2	,	,	,	O	_	_
-    3	Société	Société	NNP	O	_	_
-    4	d'Investissement	d'Investissement	NNP	O	_	_
-    5	à	à	NNP	O	_	_
-    6	Capital	Capital	NNP	O	_	_
-    7	Variable	Variable	NNP	O	_	_
-    8	.	.	.	O	_	_
+    1	They	they	PRON	PRN	Case=Nom|Number=Plur	2	nsubj	4:nsubj	_
+    2	buy	buy	VERB	VB	Number=Plur|Person=3|Tense=Pres	0	root	_	_
+    3	and	and	CONJ	CC	_	2	cc	_	_
+    4	sell	sell	VERB	VB	Number=Plur|Person=3|Tense=Pres	2	conj	0:root	_
+    5	books	book	NOUN	NNS	Number=Plur	2	dobj	4:dobj	SpaceAfter=No
+    6	.	.	PUNCT	.	_	2	punct	_	_
     
     Args:
         doc ([type]): [description]
     """
     data = []
-
-    tokens_with_ents = load_ents(doc)
-
+    
+    tokens_with_features = load_features(doc)
+    # split into sents on \n, then after each sent add blank row
     for tok in doc:
-
-        if tok.is_space:
-            form = "_"
-            lemma = "_"
+        if is_nl_token(tok):
+            data.append({})
         else:
-            form = tok.orth_
-            lemma = tok.lemma_
-        tok_id = tok.i + 1
+            if tok.is_space:
+                form = "_"
+                lemma = "_"
+            else:
+                form = tok.orth_
+                lemma = tok.lemma_
+            tok_id = tok.i +1
+            
+            misc = "SpaceAfter=No" if not tok.whitespace_ else "_"
+            row = {}
+            #ID  FORM    LEMMA   CPOSTAG POSTAG  FEATS   HEAD    DEPREL  DEPS    MISC   
 
-        misc = "SpaceAfter=No" if not tok.whitespace_ else "_"
-        row = {}
-
-        row["ID"] = str(tok_id)  # Token counter, starting at 1 for each new sentence.
-        row["FORM"] = "_" if form == "" else form  # Word form or punctuation symbol.
-        row["LEMMA"] = "_" if lemma == "" else lemma  # Lemma of the word form.
-        row["POSTAG"] = (
-            "_" if tok.pos_ == "" else tok.pos_
-        )  # Fine-grained part-of-speech tag
-        # Named Entity tag, or underscore if not available.
-        # If a named entity covers multiple tokens, all of the tokens simply carry
-        # the same label without (no sequence encoding).
-        # INCEpTION interprets this data as ent spans, yay!
-        if tok.i in tokens_with_ents.keys():
-            row["NER"] = tokens_with_ents[tok.i]
-        else:
-            row["NER"] = "_"
-        row["HEAD"] = "_"
-        row["DEPREL"] = "_"
-
-        data.append(row)
+            row["ID"] = str(tok_id) # Word index, integer starting at 1 for each new sentence; may be a range for tokens with multiple words.
+            row["FORM"] = "_" if form == '' else form #Word form or punctuation symbol.
+            row["LEMMA"] = '_' if lemma == '' else lemma #Lemma or stem of word form.        
+            row["CPOSTAG"] = "_" if tok.pos_ == '' else tok.pos_ #Part-of-speech tag from the universal POS tag set.
+            row["POSTAG"] = "_" #Language-specific part-of-speech tag; underscore if not available.
+            # FEATS List of morphological features from the universal feature inventory or from a defined language-specific extension; underscore if not available.
+            if tok.i in tokens_with_features.keys():
+                row["FEATS"] = tokens_with_features[tok.i]
+            else:
+                row["FEATS"] = "_" 
+            row["HEAD"] = "_"
+            row["DEPREL"] = "_"
+            row["DEPS"] = "_"
+            row["MISC"] = "_"
+            data.append(row)
     output_file = f""""""
     for row in data:
-        for column in row.keys():
-            if column == "DEPREL":
-                output_file += row[column] + "\n"
-            else:
-                output_file += row[column] + "\t"
+        if len(row.keys()) == 0:
+            output_file += '\n'
+        else:
+            for column in row.keys():
+                if column == "MISC":
+                    output_file += row[column] + '\n'
+                else:
+                    output_file += row[column] + '\t'
     return output_file
+
+def is_nl_token(t):
+    # if a token consists of all space, and has at least one newline char, we segment as a sentence.
+    if t.is_space and '\n' in t.text:
+        return True
+    else:
+        return False

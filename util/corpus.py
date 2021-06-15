@@ -9,7 +9,7 @@ from collections import Counter, namedtuple
 from functools import lru_cache
 import importlib
 
-Token = namedtuple("Token", ["text", "lemma_", "pos_", "ent_type_", "is_stop"])
+Token = namedtuple("Token", ["text", "lemma_", "pos_", "morph","is_stop"])
 
 
 def is_stop(word: str, STOP_WORDS: Set):
@@ -39,16 +39,16 @@ def load_lookups():
             key = lookup.stem[lookup.stem.find("_") + 1 :]
             if "lemma" in key:
                 lemma_data = srsly.read_json(lookup)
-            if "entity" in key:
-                ent_data = srsly.read_json(lookup)
+            if "features" in key:
+                features_data = srsly.read_json(lookup)
             if "pos" in key:
                 pos_data = srsly.read_json(lookup)
-        return lemma_data, ent_data, pos_data
+        return lemma_data, features_data, pos_data
 
 
 def make_corpus(lang_name: str):
     new_lang = Path.cwd() / "new_lang"
-    lemma_data, ent_data, pos_data = load_lookups()
+    lemma_data, features_data, pos_data = load_lookups()
     STOP_WORDS = load_stopwords()
     text_path = new_lang / "texts"
     corpus = ""
@@ -97,7 +97,7 @@ def make_corpus(lang_name: str):
                     text=t.text,
                     lemma_=lemma_data.get(t.text, ""),
                     pos_=pos_data.get(t.text, ""),
-                    ent_type_=ent_data.get(t.text, ""),
+                    morph=features_data.get(t.text, ""),
                     is_stop=is_stop(t.text, STOP_WORDS),
                 )
                 for t in doc

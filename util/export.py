@@ -121,55 +121,56 @@ def update_vocab_from_lookups(nlp):
                 doc.spans["ents"] = [span]
 
 
-def update_tokens_with_lookups(nlp, docs:List[Doc]) -> List[Doc]:
+def update_tokens_with_lookups(nlp, docs: List[Doc]) -> List[Doc]:
 
-    #Read the lookups directory, make dict of table names and path to json files
+    # Read the lookups directory, make dict of table names and path to json files
     new_lang = Path.cwd() / "new_lang"
     lookups_path = new_lang / "lookups"
     for lookup in lookups_path.iterdir():
-        key = lookup.stem[lookup.stem.find('_') + 1:]
-        if 'lemma' in key:
+        key = lookup.stem[lookup.stem.find("_") + 1 :]
+        if "lemma" in key:
             lemma_data = srsly.read_json(lookup)
             assert isinstance(lemma_data, dict)
 
-        if 'features' in key:
+        if "features" in key:
             features_data = srsly.read_json(lookup)
             assert isinstance(features_data, dict)
-        if 'pos' in key:
+        if "pos" in key:
             pos_data = srsly.read_json(lookup)
             assert isinstance(pos_data, dict)
 
     matcher = PhraseMatcher(nlp.vocab)
     try:
         for ent in features_data.keys():
-                matcher.add(ent, [nlp(ent)])
+            matcher.add(ent, [nlp(ent)])
     except AttributeError as e:
         print(e)
 
     for doc in docs:
         for t in doc:
-            
+
             lemma = lemma_data.get(t.text, None)
             if lemma:
                 t.lemma_ = lemma
-            
+
             pos = pos_data.get(t.text, None)
             if pos:
                 try:
                     t.pos_ = pos
-                except Exception as e: 
-                    raise HTTPException(status_code=404, detail="Invalid part of speech type: " + str(e))
-            
+                except Exception as e:
+                    raise HTTPException(
+                        status_code=404, detail="Invalid part of speech type: " + str(e)
+                    )
+
         matches = matcher(doc)
         for match_id, start, end in matches:
             string_id = nlp.vocab.strings[match_id]
-            #ent_label = entity_data.get(string_id, None)
+            # ent_label = entity_data.get(string_id, None)
             span = Span(doc, start, end, label=string_id)
-            if doc.spans.get('ents',None):
-                doc.spans['ents'].append(span)
+            if doc.spans.get("ents", None):
+                doc.spans["ents"].append(span)
             else:
                 doc.spans["ents"] = [span]
-
 
     return docs
 
@@ -189,14 +190,14 @@ def load_features(doc):
     lang_name = list(new_lang.iterdir())[0].name
     lookups_path = new_lang / "lookups"
     for lookup in lookups_path.iterdir():
-        key = lookup.stem[lookup.stem.find('_') + 1:]
-        if 'features' in key:
+        key = lookup.stem[lookup.stem.find("_") + 1 :]
+        if "features" in key:
             features_data = srsly.read_json(lookup)
             assert isinstance(features_data, dict)
     tokens_with_features = {}
-    if doc.spans.get('ents', None):
-        for span in doc.spans['ents']:
-            feat = features_data.get(span.text,None)
+    if doc.spans.get("ents", None):
+        for span in doc.spans["ents"]:
+            feat = features_data.get(span.text, None)
             for t in span:
                 tokens_with_features[t.i] = feat
     return tokens_with_features
@@ -223,7 +224,7 @@ def doc_to_conllu(doc) -> str:
         doc ([type]): [description]
     """
     data = []
-    
+
     tokens_with_features = load_features(doc)
     # split into sents on \n, then after each sent add blank row
     for tok in doc:
@@ -236,22 +237,30 @@ def doc_to_conllu(doc) -> str:
             else:
                 form = tok.orth_
                 lemma = tok.lemma_
-            tok_id = tok.i +1
-            
+            tok_id = tok.i + 1
+
             misc = "SpaceAfter=No" if not tok.whitespace_ else "_"
             row = {}
-            #ID  FORM    LEMMA   CPOSTAG POSTAG  FEATS   HEAD    DEPREL  DEPS    MISC   
+            # ID  FORM    LEMMA   CPOSTAG POSTAG  FEATS   HEAD    DEPREL  DEPS    MISC
 
-            row["ID"] = str(tok_id) # Word index, integer starting at 1 for each new sentence; may be a range for tokens with multiple words.
-            row["FORM"] = "_" if form == '' else form #Word form or punctuation symbol.
-            row["LEMMA"] = '_' if lemma == '' else lemma #Lemma or stem of word form.        
-            row["CPOSTAG"] = "_" if tok.pos_ == '' else tok.pos_ #Part-of-speech tag from the universal POS tag set.
-            row["POSTAG"] = "_" #Language-specific part-of-speech tag; underscore if not available.
+            row["ID"] = str(
+                tok_id
+            )  # Word index, integer starting at 1 for each new sentence; may be a range for tokens with multiple words.
+            row["FORM"] = (
+                "_" if form == "" else form
+            )  # Word form or punctuation symbol.
+            row["LEMMA"] = "_" if lemma == "" else lemma  # Lemma or stem of word form.
+            row["CPOSTAG"] = (
+                "_" if tok.pos_ == "" else tok.pos_
+            )  # Part-of-speech tag from the universal POS tag set.
+            row[
+                "POSTAG"
+            ] = "_"  # Language-specific part-of-speech tag; underscore if not available.
             # FEATS List of morphological features from the universal feature inventory or from a defined language-specific extension; underscore if not available.
             if tok.i in tokens_with_features.keys():
                 row["FEATS"] = tokens_with_features[tok.i]
             else:
-                row["FEATS"] = "_" 
+                row["FEATS"] = "_"
             row["HEAD"] = "_"
             row["DEPREL"] = "_"
             row["DEPS"] = "_"
@@ -260,18 +269,19 @@ def doc_to_conllu(doc) -> str:
     output_file = f""""""
     for row in data:
         if len(row.keys()) == 0:
-            output_file += '\n'
+            output_file += "\n"
         else:
             for column in row.keys():
                 if column == "MISC":
-                    output_file += row[column] + '\n'
+                    output_file += row[column] + "\n"
                 else:
-                    output_file += row[column] + '\t'
+                    output_file += row[column] + "\t"
     return output_file
+
 
 def is_nl_token(t):
     # if a token consists of all space, and has at least one newline char, we segment as a sentence.
-    if t.is_space and '\n' in t.text:
+    if t.is_space and "\n" in t.text:
         return True
     else:
         return False

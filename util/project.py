@@ -1,12 +1,11 @@
 from pathlib import Path
 
-    
-        
-def make_project(lang_name,lang_code):
-    new_lang = Path.cwd() / "new_lang" 
-    project_path = new_lang / 'project.yml'
+
+def make_project(lang_name, lang_code):
+    new_lang = Path.cwd() / "new_lang"
+    project_path = new_lang / "project.yml"
     project_path.write_text(
-f"""
+        f"""
 title: "New Language Project for Part-of-speech Tagging, Lemmatizer and Features from CoNLL-U data"
 description: "This project template lets you train a part-of-speech tagger, lemmatizer and features from a [Universal Dependencies-style](https://universaldependencies.org/) corpus. It takes care of downloading the treebank, converting it to spaCy's format and training and evaluating the model. Just make sure to adjust the `lang` and treebank settings in the variables below."
 
@@ -115,4 +114,5 @@ commands:
       - "rm -rf training/*"
       - "rm -rf metrics/*"
       - "rm -rf corpus/*"    
-""")
+"""
+    )

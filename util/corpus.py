@@ -9,7 +9,7 @@ from collections import Counter, namedtuple
 from functools import lru_cache
 import importlib
 
-Token = namedtuple("Token", ["text", "lemma_", "pos_", "morph","is_stop"])
+Token = namedtuple("Token", ["text", "lemma_", "pos_", "morph", "is_stop"])
 
 
 def is_stop(word: str, STOP_WORDS: Set):

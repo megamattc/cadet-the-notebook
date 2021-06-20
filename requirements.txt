@@ -1,0 +1,4 @@
+jupyter==1.0.0
+spacy==3.0.6
+slugify==0.0.1
+
